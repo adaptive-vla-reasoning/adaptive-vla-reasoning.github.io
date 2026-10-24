@@ -335,6 +335,9 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
           <div class="chips"></div>
         </figure>
       </div>
+      <div class="chart" id="chart-latency" style="margin-top:18px">
+        <div class="title">Inference latency per policy query (s)</div>
+      </div>
     </div>
     <div class="task">
       <h3>Put the brush on the blue towel</h3>
@@ -478,6 +481,7 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
       { name: 'Next motion', color: C.full, values: [57, 80, 83, 75, 40], note: 'highest in transport, lower at release' }] }
   };
 
+  var LAT = {"full": [1.216, 1.304, 1.302, 1.326, 1.215, 1.374, 1.344, 1.321, 1.332, 1.205, 0.971, 1.211, 1.145, 1.144, 1.381, 1.224, 1.077, 1.198, 1.179, 1.124, 1.163, 1.728, 1.157, 1.22, 1.289, 1.343, 1.23, 0.974, 1.093, 0.748, 0.851, 1.703], "aware": [1.55, 1.273, 1.456, 1.27, 1.114, 1.154, 0.742, 1.428, 0.947, 1.115, 1.307, 0.987, 1.123, 0.667, 0.676, 1.084, 1.332, 1.24, 0.644, 0.65, 0.65, 1.361, 0.986, 0.977, 1.877, 0.436, 1.141, 1.651, 1.681, 1.565, 1.712, 1.656, 1.581, 1.121, 1.425, 1.386, 1.269, 1.134, 0.837, 1.174, 1.44, 1.366, 1.617, 1.37, 1.486, 1.465, 1.682, 0.646, 1.067, 1.125, 0.647, 0.734, 0.666, 0.647, 1.136, 1.141, 0.886, 1.113, 1.011, 0.706, 0.88, 0.979, 0.907, 1.019, 0.881, 1.269, 1.015, 0.961, 1.065, 0.753, 1.11, 0.986, 1.558, 0.842, 1.077, 0.869, 0.896, 1.193, 0.853]};
   var NS = 'http://www.w3.org/2000/svg';
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
@@ -566,11 +570,40 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
     });
   }
 
+  function latencyChart(id) {
+    var box = document.getElementById(id); if (!box) return;
+    var series = [{ name: 'Full Reasoning', color: C.full, values: LAT.full }, { name: 'AWARE', color: C.aware, values: LAT.aware }];
+    series.forEach(function (sr) { var m = sr.values.reduce(function (a, b) { return a + b; }, 0) / sr.values.length; sr.name += ' (mean ' + m.toFixed(2) + ' s)'; });
+    legend(box, series);
+    var W = 900, H = 220, mL = 40, mR = 12, mT = 10, mB = 34;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img' }, box);
+    var pw = W - mL - mR, ph = H - mT - mB;
+    var n = Math.max(LAT.full.length, LAT.aware.length), ymax = 2;
+    var x = function (i) { return mL + (i / (n - 1)) * pw; };
+    var y = function (v) { return mT + ph - (v / ymax) * ph; };
+    [0, 0.5, 1, 1.5, 2].forEach(function (t) {
+      el('line', { x1: mL, x2: W - mR, y1: y(t), y2: y(t), class: t === 0 ? 'axis' : 'grid-line' }, svg);
+      var tx = el('text', { x: mL - 8, y: y(t) + 4, 'text-anchor': 'end' }, svg); tx.textContent = t.toFixed(1);
+    });
+    for (var q = 0; q < n; q += 10) {
+      var t = el('text', { x: x(q), y: y(0) + 16, 'text-anchor': 'middle', class: 'cat small' }, svg); t.textContent = q + 1;
+    }
+    var xl = el('text', { x: mL + pw / 2, y: H - 2, 'text-anchor': 'middle', class: 'cat small' }, svg); xl.textContent = 'policy query';
+    series.forEach(function (sr) {
+      var pts = sr.values.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
+      var path = el('polyline', { points: pts, class: 'line', stroke: sr.color }, svg);
+      var len = 0; for (var i = 1; i < sr.values.length; i++) { var dx = x(i) - x(i - 1), dy = y(sr.values[i]) - y(sr.values[i - 1]); len += Math.sqrt(dx * dx + dy * dy); }
+      path.setAttribute('stroke-dasharray', len); path.setAttribute('stroke-dashoffset', reduced ? 0 : len);
+      var tt = el('title', {}, path); tt.textContent = sr.name;
+    });
+  }
+
   barChart('chart-real', DATA.real);
   barChart('chart-indist', DATA.indist);
   barChart('chart-shift', DATA.shift);
   barChart('chart-causal', DATA.causal);
   lineMultiples('chart-retention', DATA.retention);
+  latencyChart('chart-latency');
 
   // animate charts when scrolled into view
   var charts = document.querySelectorAll('.chart');
