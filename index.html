@@ -144,11 +144,6 @@ figcaption b, .caption b { color: var(--fg); font-weight: 600; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { font-size: 0.72rem; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--faint); background: transparent; transition: background .25s, color .25s; }
 .chip.on { background: var(--chip-on); color: var(--chip-on-fg); border-color: transparent; }
-.grid { margin-top: 8px; display: grid; gap: 2px; }
-.grid .cell { height: 8px; background: var(--grid); border-radius: 1px; }
-.grid .cell.on { background: var(--accent); opacity: 0.75; }
-.grid .cell.now { outline: 2px solid var(--fg); outline-offset: -1px; opacity: 1; }
-.grid-label { font-size: 0.72rem; color: var(--faint); margin-top: 4px; display: flex; justify-content: space-between; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.88rem; color: var(--muted); justify-content: center; margin-bottom: 8px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
@@ -318,7 +313,7 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
   <div class="wrap">
     <h2>Real-robot rollouts</h2>
     <div class="prose">
-      <p>We apply the same offline post-training procedure to OpenVLA-ECoT and deploy the resulting adaptive policy on a WidowX robot. We evaluate four pick-and-place tasks in two environments, with 24 episodes per task and 96 episodes per method. The rollouts below overlay the generated reasoning on the camera view: bounding boxes from VISIBLE OBJECTS, the predicted GRIPPER POSITION with its recent history and predicted path, and the current SUBTASK and MOVE. Bounding boxes are temporally smoothed for visualisation. The grid below each rollout indicates, for every policy query, which of the seven reasoning primitives were generated (orange) and which were replaced by the <code>&lt;skip&gt;</code> token (grey).</p>
+      <p>We apply the same offline post-training procedure to OpenVLA-ECoT and deploy the resulting adaptive policy on a WidowX robot. We evaluate four pick-and-place tasks in two environments, with 24 episodes per task and 96 episodes per method. The rollouts below overlay the generated reasoning on the camera view: bounding boxes from VISIBLE OBJECTS, the predicted GRIPPER POSITION with its recent history and predicted path, and the current SUBTASK and MOVE. Bounding boxes are temporally smoothed for visualisation. The labels below each rollout indicate which of the seven reasoning primitives are generated at the current policy query (orange) and which are replaced by the <code>&lt;skip&gt;</code> token (grey).</p>
     </div>
   </div>
   <div class="wrap wide">
@@ -330,12 +325,12 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
         <figure class="clip" data-timeline="eggplant_full">
           <video muted autoplay loop playsinline preload="metadata" src="static/videos/eggplant_full.mp4"></video>
           <div class="who"><i style="background:var(--full)"></i>Full Reasoning <span class="n"></span></div>
-          <div class="chips"></div><div class="grid"></div>
+          <div class="chips"></div>
         </figure>
         <figure class="clip" data-timeline="eggplant_aware">
           <video muted autoplay loop playsinline preload="metadata" src="static/videos/eggplant_aware.mp4"></video>
           <div class="who"><i style="background:var(--accent)"></i>AWARE <span class="n"></span></div>
-          <div class="chips"></div><div class="grid"></div>
+          <div class="chips"></div>
         </figure>
       </div>
     </div>
@@ -345,12 +340,12 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
         <figure class="clip" data-timeline="brush_full">
           <video muted autoplay loop playsinline preload="metadata" src="static/videos/brush_full.mp4"></video>
           <div class="who"><i style="background:var(--full)"></i>Full Reasoning <span class="n"></span></div>
-          <div class="chips"></div><div class="grid"></div>
+          <div class="chips"></div>
         </figure>
         <figure class="clip" data-timeline="brush_aware">
           <video muted autoplay loop playsinline preload="metadata" src="static/videos/brush_aware.mp4"></video>
           <div class="who"><i style="background:var(--accent)"></i>AWARE <span class="n"></span></div>
-          <div class="chips"></div><div class="grid"></div>
+          <div class="chips"></div>
         </figure>
       </div>
     </div>
@@ -598,28 +593,20 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
   var clips = [];
   document.querySelectorAll('.clip[data-timeline]').forEach(function (fig) {
     var tl = TL[fig.dataset.timeline]; if (!tl) return;
-    var video = fig.querySelector('video'), chips = fig.querySelector('.chips'), grid = fig.querySelector('.grid'), n = fig.querySelector('.who .n');
+    var video = fig.querySelector('video'), chips = fig.querySelector('.chips'), n = fig.querySelector('.who .n');
     var chipEls = SHORT.map(function (s) { var c = document.createElement('span'); c.className = 'chip'; c.textContent = s; chips.appendChild(c); return c; });
-    var steps = tl.steps, cells = [];
-    grid.style.gridTemplateColumns = 'repeat(' + steps.length + ', 1fr)';
-    FIELDS.forEach(function (f, r) {
-      cells[r] = steps.map(function (s) { var c = document.createElement('div'); c.className = 'cell' + (s.on[f] ? ' on' : ''); c.title = f + ', query ' + (steps.indexOf(s) + 1) + (s.on[f] ? '' : ' (skipped)'); grid.appendChild(c); return c; });
-    });
-    var kept = 0, total = steps.length * FIELDS.length;
-    steps.forEach(function (s) { FIELDS.forEach(function (f) { if (s.on[f]) kept++; }); });
-    clips.push({ video: video, steps: steps, chipEls: chipEls, cells: cells, n: n, cur: -1 });
+    var steps = tl.steps;
+    clips.push({ video: video, steps: steps, chipEls: chipEls, n: n, cur: -1 });
   });
   function tick() {
     clips.forEach(function (c) {
       var t = c.video.currentTime, i = -1;
       for (var k = 0; k < c.steps.length; k++) { if (c.steps[k].t <= t) i = k; else break; }
       if (i === c.cur) return;
-      if (c.cur >= 0) c.cells.forEach(function (row) { row[c.cur].classList.remove('now'); });
       c.cur = i;
       if (i < 0) { c.chipEls.forEach(function (e) { e.classList.remove('on'); }); c.n.textContent = ''; return; }
       var s = c.steps[i];
       FIELDS.forEach(function (f, k) { c.chipEls[k].classList.toggle('on', !!s.on[f]); });
-      c.cells.forEach(function (row) { row[i].classList.add('now'); });
       c.n.textContent = 'query ' + (i + 1) + ' / ' + c.steps.length;
     });
     requestAnimationFrame(tick);
