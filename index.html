@@ -570,6 +570,7 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
     });
   }
 
+  var latUpdate = {};
   function latencyChart(id) {
     var box = document.getElementById(id); if (!box) return;
     var series = [{ name: 'Full Reasoning', color: C.full, values: LAT.full }, { name: 'AWARE', color: C.aware, values: LAT.aware }];
@@ -589,12 +590,19 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
       var t = el('text', { x: x(q), y: y(0) + 16, 'text-anchor': 'middle', class: 'cat small' }, svg); t.textContent = q + 1;
     }
     var xl = el('text', { x: mL + pw / 2, y: H - 2, 'text-anchor': 'middle', class: 'cat small' }, svg); xl.textContent = 'policy query';
-    series.forEach(function (sr) {
-      var pts = sr.values.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
-      var path = el('polyline', { points: pts, class: 'line', stroke: sr.color }, svg);
-      var len = 0; for (var i = 1; i < sr.values.length; i++) { var dx = x(i) - x(i - 1), dy = y(sr.values[i]) - y(sr.values[i - 1]); len += Math.sqrt(dx * dx + dy * dy); }
-      path.setAttribute('stroke-dasharray', len); path.setAttribute('stroke-dashoffset', reduced ? 0 : len);
-      var tt = el('title', {}, path); tt.textContent = sr.name;
+    // drawn live: each line grows with the video above it (see tick())
+    series.forEach(function (sr, k) {
+      var path = el('polyline', { points: '', class: 'line', stroke: sr.color, style: 'transition:none' }, svg);
+      var dot = el('circle', { r: 5, fill: sr.color, stroke: 'var(--bg)', 'stroke-width': 2, style: 'opacity:0' }, svg);
+      var lab = el('text', { x: 0, y: 0, 'text-anchor': 'start', style: 'opacity:0;font-weight:600', fill: sr.color }, svg);
+      latUpdate[k === 0 ? 'eggplant_full' : 'eggplant_aware'] = function (i) {
+        if (i < 0) { path.setAttribute('points', ''); dot.style.opacity = 0; lab.style.opacity = 0; return; }
+        var pts = []; for (var q = 0; q <= i && q < sr.values.length; q++) pts.push(x(q) + ',' + y(sr.values[q]));
+        path.setAttribute('points', pts.join(' '));
+        var j = Math.min(i, sr.values.length - 1);
+        dot.setAttribute('cx', x(j)); dot.setAttribute('cy', y(sr.values[j])); dot.style.opacity = 1;
+        lab.setAttribute('x', x(j) + 9); lab.setAttribute('y', y(sr.values[j]) - 8); lab.textContent = sr.values[j].toFixed(2) + ' s'; lab.style.opacity = 1;
+      };
     });
   }
 
@@ -631,7 +639,7 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
     var video = fig.querySelector('video'), chips = fig.querySelector('.chips'), n = fig.querySelector('.who .n');
     var chipEls = SHORT.map(function (s) { var c = document.createElement('span'); c.className = 'chip'; c.textContent = s; chips.appendChild(c); return c; });
     var steps = tl.steps;
-    clips.push({ video: video, steps: steps, chipEls: chipEls, n: n, cur: -1 });
+    clips.push({ video: video, steps: steps, chipEls: chipEls, n: n, cur: -1, name: fig.dataset.timeline });
   });
   function tick() {
     clips.forEach(function (c) {
@@ -639,6 +647,7 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
       for (var k = 0; k < c.steps.length; k++) { if (c.steps[k].t <= t) i = k; else break; }
       if (i === c.cur) return;
       c.cur = i;
+      if (latUpdate[c.name]) latUpdate[c.name](i);
       if (i < 0) { c.chipEls.forEach(function (e) { e.classList.remove('on'); }); c.n.textContent = ''; return; }
       var s = c.steps[i];
       FIELDS.forEach(function (f, k) { c.chipEls[k].classList.toggle('on', !!s.on[f]); });
