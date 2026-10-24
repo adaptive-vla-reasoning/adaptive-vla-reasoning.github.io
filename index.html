@@ -124,6 +124,10 @@ section h2 { margin-bottom: 22px; }
 figure { margin: 0; }
 .fig { margin-top: 28px; }
 .fig img { margin-inline: auto; }
+.seg { display: flex; justify-content: center; gap: 0; margin-top: 12px; }
+.seg button { font: inherit; font-size: 0.88rem; padding: 6px 16px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+.seg button:first-child { border-radius: 999px 0 0 999px; } .seg button:last-child { border-radius: 0 999px 999px 0; border-left: 0; }
+.seg button.on { background: var(--chip-on); color: var(--chip-on-fg); border-color: transparent; }
 figcaption, .caption { font-size: 0.92rem; color: var(--muted); line-height: 1.5; margin-top: 10px; max-width: 80ch; margin-inline: auto; }
 figcaption b, .caption b { color: var(--fg); font-weight: 600; }
 .video-frame { background: #000; aspect-ratio: 16/9; max-width: 100%; }
@@ -282,11 +286,9 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
   <div class="wrap">
     <h2>Video</h2>
     <div class="video-frame">
-      <video controls preload="metadata" poster="static/images/video_poster.jpg" playsinline>
-        <source src="static/videos/aware_video.mp4" type="video/mp4">
-      </video>
+      <video id="overview" controls preload="metadata" poster="static/images/video_poster.jpg" playsinline src="static/videos/aware_video.mp4"></video>
     </div>
-    <p class="caption">Overview video (2 min, narrated).</p>
+    <div class="seg" role="group" aria-label="Audio"><button type="button" class="on" data-src="static/videos/aware_video.mp4">Narrated</button><button type="button" data-src="static/videos/aware_video_silent.mp4">No sound</button></div>
   </div>
 </section>
 
@@ -296,7 +298,7 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
     <div class="prose">
       <p>We consider autoregressive reasoning VLAs that generate a structured sequence of <em>reasoning primitives</em> (for example PLAN, VISIBLE OBJECTS, SUBTASK, MOVE and GRIPPER POSITION) before predicting the action in the same sequence. Our key idea is to use action prediction as a task-grounded signal for determining which reasoning is relevant in each state. Intuitively, if removing a reasoning primitive increases the action-prediction error, that primitive contains information relevant to the current action. Conversely, reasoning that can be removed without degrading action prediction is a natural candidate to omit.</p>
       <p><b>Action-grounded trace selection.</b> Conditioned on a candidate reasoning trace, the frozen full-reasoning policy predicts an action chunk, which we compare to the demonstrated action using the <b>L1 norm</b>:</p>
-      <div class="eq" data-tex="e_t(m) = \left\lVert \mathrm{Decode}\big(\pi_0(a \mid x_t, y_t^{m})\big) - a_t^{*} \right\rVert_1 \tag{1}">e<sub>t</sub>(m) = &#8741;Decode(&pi;<sub>0</sub>(a | x<sub>t</sub>, y<sub>t</sub><sup>m</sup>)) &minus; a<sub>t</sub><sup>*</sup>&#8741;<sub>1</sub></div>
+      <div class="eq" data-tex="e_t(m) = \left\lVert \mathrm{Decode}\big(\pi_0(a \mid x_t, y_t^{m})\big) - a_t^{*} \right\rVert_1">e<sub>t</sub>(m) = &#8741;Decode(&pi;<sub>0</sub>(a | x<sub>t</sub>, y<sub>t</sub><sup>m</sup>)) &minus; a<sub>t</sub><sup>*</sup>&#8741;<sub>1</sub></div>
       <p>We select the candidate with the lowest action-prediction error, and use trace length solely to break exact ties. Thus, action prediction takes priority over reasoning reduction. Because this selection is performed independently at every control state, the same reasoning primitive may be retained for one action and omitted for the next.</p>
       <p><b>Consistency distillation.</b> We initialize a frozen teacher and a trainable student from the same full-reasoning policy. The teacher is conditioned on the full reasoning trace, while the student is trained on the selected trace. A KL term matches the student's action-token distribution to that of the teacher, and a hidden-state term aligns their final-layer action-token representations. Together, these objectives encourage the student to change <em>how it reasons</em> while preserving <em>how it acts</em>. Omitted reasoning primitives retain their field boundaries while their content is replaced by a single atomic <code>&lt;skip&gt;</code> token. At inference time, AWARE generates its selected reasoning and action autoregressively in a single policy call, without candidate evaluation or an external routing model.</p>
     </div>
@@ -631,6 +633,17 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
     }, { rootMargin: '200px 0px' });
     document.querySelectorAll('video[autoplay]').forEach(function (v) { io.observe(v); });
   }
+
+  // overview video: narrated / silent
+  var ov = document.getElementById('overview');
+  if (ov) document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (b.classList.contains('on')) return;
+      var t = ov.currentTime, playing = !ov.paused;
+      document.querySelectorAll('.seg button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      ov.src = b.dataset.src; ov.currentTime = t; if (playing) ov.play().catch(function () {});
+    });
+  });
 
   // nav highlight
   var links = Array.prototype.slice.call(document.querySelectorAll('.nav li a'));
