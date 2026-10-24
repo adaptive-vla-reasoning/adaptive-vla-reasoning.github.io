@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Think Less, Act Better</title>
+<meta name="description" content="AWARE: Adaptive Reasoning for Vision-Language-Action Models. A VLA that learns when to reason, what to reason about, and how much reasoning to generate at each control step.">
+<meta property="og:title" content="Think Less, Act Better: Adaptive Reasoning for Vision-Language-Action Models">
+<meta property="og:description" content="AWARE teaches a reasoning VLA when to reason, what to reason about, and how much, while preserving full-reasoning task success.">
+<meta property="og:image" content="static/images/teaser.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:wght@600&display=swap">
+<style>
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f6f6f4;
+  --line: #e4e3df;
+  --fg: #222222;
+  --muted: #6b6a66;
+  --faint: #9c9b96;
+  --accent: #e4701d;        /* AWARE */
+  --accent2: #ffb347;       /* warm highlight */
+  --title-a: #a8330a;       /* deep end of the title gradient */
+  --cool: #1b9aaa;          /* faint cool counterweight in the hero wash */
+  --full: #4f7f58;          /* Full Reasoning */
+  --none: #9a9790;          /* No Reasoning */
+  --link: #1a5fb4;
+  --grid: #ebeae6;
+  --chip-on: #fde5d1;
+  --chip-on-fg: #8a3f08;
+  --font: "Noto Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --serif: "Noto Serif", Georgia, serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131313; --bg-alt: #1b1b1a; --line: #2e2e2c; --fg: #ebe9e4; --muted: #a9a79f; --faint: #78766f;
+    --accent: #f0873b; --accent2: #ffd08a; --title-a: #ff9a4d; --cool: #3fb8c8; --full: #7cb487; --none: #8c8a83; --link: #78aef0; --grid: #262624; --chip-on: #3a2314; --chip-on-fg: #ffc79b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131313; --bg-alt: #1b1b1a; --line: #2e2e2c; --fg: #ebe9e4; --muted: #a9a79f; --faint: #78766f;
+  --accent: #f0873b; --accent2: #ffd08a; --title-a: #ff9a4d; --cool: #3fb8c8; --full: #7cb487; --none: #8c8a83; --link: #78aef0; --grid: #262624; --chip-on: #3a2314; --chip-on-fg: #ffc79b;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 60px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+img, video { max-width: 100%; height: auto; display: block; }
+h1, h2, h3 { font-weight: 600; line-height: 1.25; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 3.8vw, 2.6rem); font-weight: 700; }
+h2 { font-size: 1.6rem; text-align: center; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+.wrap { width: 100%; max-width: 820px; margin-inline: auto; padding-inline: 20px; }
+.wide { max-width: 1120px; }
+code { font-family: Consolas, Menlo, monospace; font-size: 0.92em; background: var(--bg-alt); padding: 1px 5px; border-radius: 3px; }
+
+/* nav */
+.nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 14px; height: 48px; }
+.nav .brand { font-weight: 700; color: var(--fg); white-space: nowrap; }
+.nav ul { list-style: none; margin: 0 0 0 auto; padding: 0; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.nav ul::-webkit-scrollbar { display: none; }
+.nav li a { display: block; padding: 5px 9px; font-size: 0.92rem; color: var(--muted); white-space: nowrap; border-bottom: 2px solid transparent; }
+.nav li a:hover { color: var(--fg); text-decoration: none; }
+.nav li a.active { color: var(--fg); border-bottom-color: var(--accent); }
+
+/* hero */
+.hero { padding-block: 52px 28px; text-align: center; }
+.hero h1 { margin-inline: auto; max-width: 40ch; }
+.hero .sub { font-size: clamp(1.1rem, 2vw, 1.4rem); color: var(--muted); margin-top: 8px; }
+.authors { margin-top: 24px; font-size: 1.05rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 20px; }
+.authors span { white-space: nowrap; }
+.authors sup, .affil sup { color: var(--muted); font-size: 0.68em; }
+.affil { margin-top: 8px; color: var(--muted); font-size: 0.95rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 16px; }
+.affil.roles { margin-top: 2px; font-size: 0.88rem; }
+.buttons { margin-top: 24px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; background: #363636; color: #fff; font-weight: 500; font-size: 0.94rem; }
+.btn:hover { text-decoration: none; background: #111; }
+.btn svg { width: 15px; height: 15px; fill: currentColor; }
+.btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+.logos { margin-top: 30px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px 30px; }
+.logo { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); font-size: 0.74rem; }
+.logo:hover { text-decoration: none; color: var(--fg); }
+.logo img { height: 30px; width: auto; max-width: 170px; object-fit: contain; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) img.inv { filter: brightness(0) invert(0.9); } }
+:root[data-theme="dark"] img.inv { filter: brightness(0) invert(0.9); }
+.teaser { margin-top: 40px; }
+.teaser img { border-radius: 8px; box-shadow: 0 24px 60px -28px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+/* warm hero wash, gradient title, accent edges */
+.hero { position: relative; isolation: isolate; overflow: hidden; }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background:
+  radial-gradient(55% 60% at 12% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%),
+  radial-gradient(45% 50% at 90% 12%, color-mix(in srgb, var(--accent2) 22%, transparent), transparent 70%),
+  radial-gradient(40% 45% at 55% 100%, color-mix(in srgb, var(--cool) 12%, transparent), transparent 70%); }
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px; mask-image: radial-gradient(60% 50% at 50% 0%, #000, transparent 100%); -webkit-mask-image: radial-gradient(60% 50% at 50% 0%, #000, transparent 100%); }
+.hero h1 { background: linear-gradient(100deg, var(--title-a) 0%, var(--accent) 48%, var(--accent2) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: 0.1em; }
+.nav { border-bottom: 0; }
+.nav::after { content: ""; display: block; height: 2px; background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 45%, transparent 90%); }
+section { border-top: 0; position: relative; }
+section::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, var(--accent) 0, color-mix(in srgb, var(--accent) 40%, var(--line)) 12%, var(--line) 30%, var(--line) 70%, transparent); }
+.btn:first-child { background: linear-gradient(100deg, var(--title-a), var(--accent) 70%, var(--accent2)); }
+.btn:first-child:hover { background: var(--accent); }
+
+/* sections */
+section { padding-block: 44px; border-top: 1px solid var(--line); }
+section h2 { margin-bottom: 22px; }
+.prose { max-width: 70ch; margin-inline: auto; }
+.prose p + p { margin-top: 14px; }
+.prose ul { margin: 12px 0 0; padding-left: 20px; }
+.prose li + li { margin-top: 6px; }
+figure { margin: 0; }
+.fig { margin-top: 28px; }
+.fig img { margin-inline: auto; }
+figcaption, .caption { font-size: 0.92rem; color: var(--muted); line-height: 1.5; margin-top: 10px; max-width: 80ch; margin-inline: auto; }
+figcaption b, .caption b { color: var(--fg); font-weight: 600; }
+.video-frame { background: #000; aspect-ratio: 16/9; max-width: 100%; }
+.video-frame video { width: 100%; height: 100%; }
+.subhead { font-weight: 600; margin-top: 26px; }
+
+/* robot rollouts */
+.task { margin-top: 30px; }
+.task h3 { font-weight: 600; margin-bottom: 10px; }
+.task h3 small { font-weight: 400; color: var(--muted); font-size: 0.9rem; margin-left: 8px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 680px) { .pair { grid-template-columns: 1fr; } }
+.clip { min-width: 0; }
+.clip video { width: 100%; aspect-ratio: 4/3; background: #000; }
+.clip .who { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin: 8px 0 6px; font-weight: 600; }
+.clip .who i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.clip .who .n { font-weight: 400; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: 0.72rem; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--faint); background: transparent; transition: background .25s, color .25s; }
+.chip.on { background: var(--chip-on); color: var(--chip-on-fg); border-color: transparent; }
+.grid { margin-top: 8px; display: grid; gap: 2px; }
+.grid .cell { height: 8px; background: var(--grid); border-radius: 1px; }
+.grid .cell.on { background: var(--accent); opacity: 0.75; }
+.grid .cell.now { outline: 2px solid var(--fg); outline-offset: -1px; opacity: 1; }
+.grid-label { font-size: 0.72rem; color: var(--faint); margin-top: 4px; display: flex; justify-content: space-between; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.88rem; color: var(--muted); justify-content: center; margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+
+/* charts */
+.chart { margin-top: 26px; }
+.chart .title { font-weight: 600; text-align: center; }
+.chart .legend { margin-top: 6px; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart svg text { font-family: var(--font); fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart svg .grid-line { stroke: var(--grid); stroke-width: 1; }
+.chart svg .axis { stroke: var(--line); stroke-width: 1; }
+.chart svg .bar { transform-box: fill-box; transform-origin: bottom; transform: scaleY(0.001); transition: transform .9s cubic-bezier(.2,.7,.2,1); }
+.chart svg .val { opacity: 0; transition: opacity .5s; fill: var(--fg); font-size: 11.5px; }
+.chart.in svg .bar { transform: scaleY(1); }
+.chart.in svg .val { opacity: 1; }
+.chart svg .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; transition: stroke-dashoffset 1.3s ease-out; }
+.chart svg .dot { transition: opacity .4s; opacity: 0; }
+.chart.in svg .dot { opacity: 1; }
+.chart svg .cat { font-size: 12px; }
+.chart svg .cat.small { font-size: 11px; }
+.multi { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+@media (prefers-reduced-motion: reduce) {
+  .chart svg .bar, .chart svg .val, .chart svg .line, .chart svg .dot { transition: none; }
+  .chart svg .bar { transform: scaleY(1); } .chart svg .val, .chart svg .dot { opacity: 1; }
+}
+.anim { margin-top: 28px; }
+.anim video { width: 100%; background: #fff; }
+.anim .row-label { font-size: 0.92rem; margin-bottom: 8px; color: var(--muted); }
+
+/* table */
+.table-wrap { overflow-x: auto; margin-top: 26px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-weight: 600; color: var(--fg); border-bottom: 2px solid var(--fg); }
+tr.group td { font-weight: 600; text-align: left; padding-top: 14px; border-bottom: 1px solid var(--line); }
+td.down { color: var(--accent); font-weight: 600; }
+
+/* bibtex */
+pre { margin: 0; background: var(--bg-alt); border: 1px solid var(--line); padding: 16px 18px; overflow-x: auto; font-family: Consolas, Menlo, monospace; font-size: 0.86rem; line-height: 1.5; color: var(--fg); }
+.bib-head { display: flex; justify-content: center; align-items: center; gap: 14px; margin-bottom: 14px; }
+.bib-head h2 { margin: 0; }
+button.copy { font: inherit; font-size: 0.85rem; padding: 4px 12px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; border-radius: 4px; }
+button.copy:hover { border-color: var(--fg); }
+footer { padding-block: 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; justify-content: space-between; }
+footer .flogos { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>.eq{text-align:center;margin:14px 0;overflow-x:auto;font-size:1.1rem}</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap wide">
+    <a class="brand" href="#top">AWARE</a>
+    <ul>
+      <li><a href="#abstract">Abstract</a></li>
+      <li><a href="#video">Video</a></li>
+      <li><a href="#method">Method</a></li>
+      <li><a href="#real-robot">Real robot</a></li>
+      <li><a href="#adaptive">Adaptive reasoning</a></li>
+      <li><a href="#causal">Causal effects</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#bibtex">BibTeX</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <h1>Think Less, Act Better: Adaptive Reasoning for Vision-Language-Action Models</h1>
+    <div class="authors">
+      <span>Šimon Sukup<sup>*1,2</sup></span>
+      <span>Albert Wilcox<sup>1,2,3</sup></span>
+      <span>Giuliano Albanese<sup>4</sup></span>
+      <span>Carl Brander<sup>2</sup></span>
+      <span>Isar Meijer<sup>2</sup></span>
+      <span>Reuben Tan<sup>2</sup></span>
+      <span>Marc Pollefeys<sup>1,2</sup></span>
+      <span>Oier Mees<sup>†1</sup></span>
+    </div>
+    <div class="affil">
+      <span><sup>1</sup>ETH Zürich</span>
+      <span><sup>2</sup>Microsoft</span>
+      <span><sup>3</sup>Georgia Institute of Technology</span>
+      <span><sup>4</sup>INSAIT</span>
+    </div>
+    <div class="affil roles"><span><sup>*</sup>Lead author</span><span><sup>†</sup>Principal supervisor</span></div>
+
+    <div class="buttons">
+      <a class="btn" href="static/paper.pdf" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l6 6v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V9h5.5L13 3.5zM8 13h8v1.6H8V13zm0 3.2h8v1.6H8v-1.6z"/></svg>Paper
+      </a>
+      <a class="btn" href="#" aria-disabled="true" title="Coming soon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6.8l5.2 5.2L17.2 6H14V4h6v6h-2V6.8L12.8 12 18 17.2V14h2v6h-6v-2h3.2L12 12.8 6.8 18H10v2H4v-6h2v3.2L11.2 12 6 6.8V10H4V4z"/></svg>arXiv
+      </a>
+      <a class="btn" href="#video">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"/></svg>Video
+      </a>
+      <a class="btn" href="#" aria-disabled="true" title="Coming soon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>Code
+      </a>
+    </div>
+    <div class="logos" aria-label="Affiliations">
+      <a class="logo" href="https://ethz.ch/" target="_blank" rel="noopener"><img class="inv" src="static/images/logos/eth.svg" alt="ETH Zürich"></a>
+      <a class="logo" href="https://www.microsoft.com/en-us/research/" target="_blank" rel="noopener"><img src="static/images/logos/microsoft.svg" alt="Microsoft"></a>
+      <a class="logo" href="https://www.gatech.edu/" target="_blank" rel="noopener"><img src="static/images/logos/gatech.svg" alt="Georgia Institute of Technology"></a>
+      <a class="logo" href="https://insait.ai/" target="_blank" rel="noopener"><img class="inv" src="static/images/logos/insait.svg" alt="INSAIT"></a>
+    </div>
+  </div>
+
+  <div class="wrap wide teaser">
+    <figure>
+      <img src="static/images/teaser.png" alt="Full embodied reasoning generates the complete reasoning trace at every control step; AWARE adapts what and how much it reasons about to the current state, preserving task success at lower decoding latency, and causal interventions show that reasoning from the wrong phase causes task failure." width="1589" height="670">
+      <figcaption><b>Figure 1.</b> Unlike full embodied chain-of-thought reasoning, which generates the complete reasoning trace at every control step, AWARE adapts <em>what</em> and <em>how much</em> it reasons about to the current state. This preserves full-reasoning task performance with less generated reasoning, while causal interventions show that changing the reasoning can substantially affect control success.</figcaption>
+    </figure>
+  </div>
+</header>
+
+<main>
+
+<section id="abstract">
+  <div class="wrap">
+    <h2>Abstract</h2>
+    <div class="prose">
+      <p>Robot chain-of-thought (CoT) reasoning can improve the performance and generalization of Vision-Language-Action (VLA) policies by generating intermediate reasoning before predicting actions. However, embodied CoT policies typically produce long, structured reasoning traces at every control step, substantially increasing inference latency even when many reasoning primitives are not relevant to the current state. To this end, we propose a novel offline approach for adaptive embodied reasoning that teaches a VLA when to reason, what to reason about and how much reasoning to generate at each control step. Starting from a full-reasoning policy, we use its own action predictions to identify compact, action-predictive reasoning traces and learn them through self-distillation while preserving action behavior.</p>
+      <p>Extensive experiments across simulated benchmarks and real-world manipulation show that AWARE reduces generated reasoning primitives by up to 30% in simulation and by 40.9% on a real-world WidowX robot, while maintaining task success comparable to Full Reasoning. We further find that its reasoning changes systematically across manipulation phases, adapting both how much it reasons and what it reasons about to the current control state. Finally, causal interventions demonstrate that this reasoning directly affects control: using otherwise correct reasoning at the wrong manipulation phase drops task success from 88% to 46%.</p>
+    </div>
+  </div>
+</section>
+
+<section id="video">
+  <div class="wrap">
+    <h2>Video</h2>
+    <div class="video-frame">
+      <video controls preload="metadata" poster="static/images/video_poster.jpg" playsinline>
+        <source src="static/videos/aware_video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <p class="caption">Overview video (2 min, narrated).</p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <h2>Method</h2>
+    <div class="prose">
+      <p>We consider autoregressive reasoning VLAs that generate a structured sequence of <em>reasoning primitives</em> (for example PLAN, VISIBLE OBJECTS, SUBTASK, MOVE and GRIPPER POSITION) before predicting the action in the same sequence. Our key idea is to use action prediction as a task-grounded signal for determining which reasoning is relevant in each state. Intuitively, if removing a reasoning primitive increases the action-prediction error, that primitive contains information relevant to the current action. Conversely, reasoning that can be removed without degrading action prediction is a natural candidate to omit.</p>
+      <p><b>Action-grounded trace selection.</b> Conditioned on a candidate reasoning trace, the frozen full-reasoning policy predicts an action chunk, which we compare to the demonstrated action using the <b>L1 norm</b>:</p>
+      <div class="eq" data-tex="e_t(m) = \left\lVert \mathrm{Decode}\big(\pi_0(a \mid x_t, y_t^{m})\big) - a_t^{*} \right\rVert_1 \tag{1}">e<sub>t</sub>(m) = &#8741;Decode(&pi;<sub>0</sub>(a | x<sub>t</sub>, y<sub>t</sub><sup>m</sup>)) &minus; a<sub>t</sub><sup>*</sup>&#8741;<sub>1</sub></div>
+      <p>We select the candidate with the lowest action-prediction error, and use trace length solely to break exact ties. Thus, action prediction takes priority over reasoning reduction. Because this selection is performed independently at every control state, the same reasoning primitive may be retained for one action and omitted for the next.</p>
+      <p><b>Consistency distillation.</b> We initialize a frozen teacher and a trainable student from the same full-reasoning policy. The teacher is conditioned on the full reasoning trace, while the student is trained on the selected trace. A KL term matches the student's action-token distribution to that of the teacher, and a hidden-state term aligns their final-layer action-token representations. Together, these objectives encourage the student to change <em>how it reasons</em> while preserving <em>how it acts</em>. Omitted reasoning primitives retain their field boundaries while their content is replaced by a single atomic <code>&lt;skip&gt;</code> token. At inference time, AWARE generates its selected reasoning and action autoregressively in a single policy call, without candidate evaluation or an external routing model.</p>
+    </div>
+  </div>
+  <div class="wrap wide">
+    <figure class="fig">
+      <img src="static/images/method.png" alt="Three-stage pipeline: reasoning-annotated demonstrations; action-grounded trace selection with a frozen full-reasoning VLA scoring candidate traces by action error; consistency distillation of the selected trace into a student VLA with KL and MSE losses against the frozen teacher." width="2000" height="827">
+      <figcaption><b>Figure 2.</b> (A) Reasoning-annotated demonstrations. (B) A frozen full-reasoning policy scores candidate masks by action error, measured with the <b>L1 norm</b>. The action-first rule minimizes error and uses trace length only to break exact ties. (C) The student learns the selected trace and action while matching the full-trace teacher at action-token logits and hidden states. After training the teacher is discarded.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="real-robot">
+  <div class="wrap">
+    <h2>Real-robot rollouts</h2>
+    <div class="prose">
+      <p>We apply the same offline post-training procedure to OpenVLA-ECoT and deploy the resulting adaptive policy on a WidowX robot. We evaluate four pick-and-place tasks in two environments, with 24 episodes per task and 96 episodes per method. The rollouts below overlay the generated reasoning on the camera view: bounding boxes from VISIBLE OBJECTS, the predicted GRIPPER POSITION with its recent history and predicted path, and the current SUBTASK and MOVE. Bounding boxes are temporally smoothed for visualisation. The grid below each rollout indicates, for every policy query, which of the seven reasoning primitives were generated (orange) and which were replaced by the <code>&lt;skip&gt;</code> token (grey).</p>
+    </div>
+  </div>
+  <div class="wrap wide">
+    <div class="legend" style="margin-top:22px"><span><i style="background:var(--full)"></i>Full Reasoning (OpenVLA-ECoT)</span><span><i style="background:var(--accent)"></i>AWARE</span><span>Clips loop synchronously.</span></div>
+
+    <div class="task">
+      <h3>Put the eggplant in the pot</h3>
+      <div class="pair" data-sync>
+        <figure class="clip" data-timeline="eggplant_full">
+          <video muted autoplay loop playsinline preload="metadata" src="static/videos/eggplant_full.mp4"></video>
+          <div class="who"><i style="background:var(--full)"></i>Full Reasoning <span class="n"></span></div>
+          <div class="chips"></div><div class="grid"></div>
+        </figure>
+        <figure class="clip" data-timeline="eggplant_aware">
+          <video muted autoplay loop playsinline preload="metadata" src="static/videos/eggplant_aware.mp4"></video>
+          <div class="who"><i style="background:var(--accent)"></i>AWARE <span class="n"></span></div>
+          <div class="chips"></div><div class="grid"></div>
+        </figure>
+      </div>
+    </div>
+    <div class="task">
+      <h3>Put the brush on the blue towel</h3>
+      <div class="pair" data-sync>
+        <figure class="clip" data-timeline="brush_full">
+          <video muted autoplay loop playsinline preload="metadata" src="static/videos/brush_full.mp4"></video>
+          <div class="who"><i style="background:var(--full)"></i>Full Reasoning <span class="n"></span></div>
+          <div class="chips"></div><div class="grid"></div>
+        </figure>
+        <figure class="clip" data-timeline="brush_aware">
+          <video muted autoplay loop playsinline preload="metadata" src="static/videos/brush_aware.mp4"></video>
+          <div class="who"><i style="background:var(--accent)"></i>AWARE <span class="n"></span></div>
+          <div class="chips"></div><div class="grid"></div>
+        </figure>
+      </div>
+    </div>
+    <div class="task">
+      <figure style="margin:0">
+        <video muted autoplay loop playsinline preload="metadata" src="static/videos/brush_panel.mp4" style="width:100%;border-radius:10px;display:block"></video>
+        <figcaption class="caption" style="margin-top:8px"><b>AWARE transfers adaptive reasoning to real-world manipulation.</b> In a representative rollout on WidowX, reasoning changes with the manipulation phase. Each row corresponds to one of the seven ECoT reasoning primitives; filled markers denote primitives generated at the current query, and bars give the retention rate of each primitive per manipulation phase (approach, grasp, transport, release), accumulated over the rollout.</figcaption>
+      </figure>
+    </div>
+
+  </div>
+  <div class="wrap">
+    <div class="chart" id="chart-real">
+      <div class="title">Real-world task success and primitive retention (24 episodes per task)</div>
+    </div>
+    <p class="caption"><b>Figure 3.</b> Across four real-world tasks AWARE achieves task success comparable to Full Reasoning while reasoning selectively. During deployment the average skip rate reached 40.9%, reducing generated output tokens by 18.5%. Teal bars report AWARE's primitive retention rate per task: the fraction of the seven reasoning primitives generated per query, averaged over 24 episodes (59.1% overall, i.e. a 40.9% skip rate).</p>
+  </div>
+</section>
+
+<section id="adaptive">
+  <div class="wrap">
+    <h2>AWARE adapts what it reasons about across manipulation phases</h2>
+    <div class="prose">
+      <p>AWARE does not learn a fixed compression of the full reasoning trace. We group policy queries by manipulation phase and measure how often each reasoning primitive is retained. Both the amount and content of its reasoning vary over the course of control: different primitives become relevant at different stages of manipulation, and the same primitive can be retained for one action and omitted for another. On LIBERO-90, the overall skip rate increases by 47.5 percentage points from grasp to alignment, and MOVE reasoning is skipped 67.9 points more often during release than during transport. On RoboCasa, next-motion reasoning is retained most frequently during transport and less frequently during release, while gripper-path reasoning is retained most often during alignment and release.</p>
+    </div>
+    <div class="chart" id="chart-retention">
+      <div class="title">Primitive retention by manipulation phase, RoboCasa (200 episodes)</div>
+    </div>
+    <p class="caption"><b>Figure 4.</b> Average retention of each RoboCasa reasoning primitive over 200 evaluation episodes, grouped by manipulation phase. Next-motion reasoning is emphasized during transport and reduced at release, while gripper-path reasoning is retained most during alignment and release.</p>
+    <div class="chart" id="chart-shift">
+      <div class="title">Task success under distribution shift</div>
+    </div>
+    <p class="caption"><b>Figure 5.</b> On LIBERO-PRO, AWARE matches Full Reasoning across object, environment and position perturbations, and also improves performance on the RoboCasa target-position shift, where AWARE reaches 26.3% success compared with 22.5% for Full Reasoning and 2.5% without reasoning.</p>
+  </div>
+</section>
+
+<section id="causal">
+  <div class="wrap">
+    <h2>Action-relevant reasoning causally affects control</h2>
+    <div class="prose">
+      <p>We test whether the reasoning retained by AWARE causally affects control rather than merely correlating with the manipulation state. At a matched reasoning budget we re-decode actions from the policy's own unchanged trace, corrupt a frequently or rarely selected primitive, reverse directional terms, or replace the whole trace with valid reasoning generated in another episode of the same task, from the same or a different manipulation phase. To isolate the effect of reasoning content from reasoning length, all intervened traces are padded or truncated to match the reasoning budget of the original policy query.</p>
+      <p>Re-decoding unchanged reasoning leaves performance unchanged, while corrupting action-relevant reasoning causes a substantially larger drop in task success than corrupting low-relevance reasoning. Replacing the native trace with reasoning from another control state reduces performance by up to 41.8 points on LIBERO and 22.2 on RoboCasa. On LIBERO, this degradation is larger for contrasting-phase than same-phase replacements, while both replacement conditions perform similarly poorly on RoboCasa. Thus, effective control depends not only on generating reasoning, but on generating reasoning whose content is appropriate for the current control state.</p>
+    </div>
+    <div class="chart" id="chart-causal">
+      <div class="title">Task success under reasoning interventions at a matched budget</div>
+    </div>
+    <p class="caption"><b>Figure 6.</b> Re-decoding unchanged reasoning leaves performance unchanged. Corrupting action-relevant reasoning causes a larger drop than corrupting low-relevance reasoning, and replacing the native trace with reasoning from another control state degrades performance further on both benchmarks.</p>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <h2>Results</h2>
+    <div class="prose">
+      <p>We evaluate MiniVLA on LIBERO-90 (seven ECoT-Lite primitives) and on two RoboCasa pick-and-place tasks with a Kinova Jaco (three BAR-X primitives), and OpenVLA-ECoT on the WidowX robot. AWARE is post-trained from the converged full-reasoning checkpoint and compared against No Reasoning and Full Reasoning baselines.</p>
+    </div>
+    <div class="chart" id="chart-indist">
+      <div class="title">In-distribution task success</div>
+    </div>
+    <p class="caption"><b>Figure 7.</b> AWARE remains close to Full Reasoning on both LIBERO-90 and RoboCasa while retaining the large performance gain from explicit reasoning on RoboCasa (32.0% vs. 11.5% without reasoning).</p>
+  </div>
+</section>
+
+<section id="bibtex">
+  <div class="wrap">
+    <div class="bib-head"><h2>BibTeX</h2><button class="copy" type="button" id="copy-bib">Copy</button></div>
+<pre id="bib">@article{sukup2026aware,
+  title   = {Think Less, Act Better: Adaptive Reasoning for Vision-Language-Action Models},
+  author  = {Sukup, \v{S}imon and Wilcox, Albert and Albanese, Giuliano and Brander, Carl and Meijer, Isar and Tan, Reuben and Pollefeys, Marc and Mees, Oier},
+  journal = {Under review},
+  year    = {2026}
+}</pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="flogos">
+      <img class="inv" src="static/images/logos/eth.svg" alt="ETH Zürich">
+      <img src="static/images/logos/microsoft.svg" alt="Microsoft">
+      <img src="static/images/logos/gatech.svg" alt="Georgia Institute of Technology">
+      <img class="inv" src="static/images/logos/insait.svg" alt="INSAIT">
+    </div>
+    <span>Page layout after <a href="https://nerfies.github.io" target="_blank" rel="noopener">Nerfies</a>.</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script>document.querySelectorAll(".eq").forEach(function(e){try{katex.render(e.dataset.tex,e,{displayMode:true,throwOnError:false})}catch(x){}});</script>
+<script src="static/data/timelines.js"></script>
+<script>
+(function () {
+  var css = getComputedStyle(document.documentElement);
+  var C = { aware: 'var(--accent)', full: 'var(--full)', none: 'var(--none)' };
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- chart data (from the paper) ----------
+  var SERIES3 = [{ name: 'No Reasoning', color: C.none }, { name: 'Full Reasoning', color: C.full }, { name: 'AWARE', color: C.aware }];
+  var SERIES2 = [{ name: 'Full Reasoning', color: C.full }, { name: 'AWARE', color: C.aware }];
+  var SERIES_REAL = [{ name: 'Full Reasoning', color: C.full }, { name: 'AWARE', color: C.aware }, { name: 'AWARE primitive retention', color: 'var(--cool)' }];
+  var DATA = {
+    real: { series: SERIES_REAL, unit: '', ymax: 1, ticks: [0, 0.2, 0.4, 0.6, 0.8, 1.0], groups: [
+      { label: 'Banana to\npink plate', values: [0.92, 0.88, 0.65] },
+      { label: 'Brush to\nblue towel', values: [0.04, 0.17, 0.44] },
+      { label: 'Carrot to\nyellow plate', values: [0.33, 0.42, 0.68] },
+      { label: 'Eggplant\nin pot', values: [0.33, 0.33, 0.62] }] },
+    indist: { series: SERIES3, unit: '%', ymax: 100, ticks: [0, 50, 100], groups: [
+      { label: 'LIBERO-90', values: [82.0, 87.6, 88.2] },
+      { label: 'RoboCasa Jaco', values: [11.5, 28.5, 32.0] }] },
+    shift: { series: SERIES3, unit: '%', ymax: 100, ticks: [0, 50, 100], groups: [
+      { label: 'LIBERO-PRO\nobject', values: [null, 68.6, 72.5] },
+      { label: 'LIBERO-PRO\nenvironment', values: [null, 48.3, 47.7] },
+      { label: 'LIBERO-PRO\nswap', values: [null, 19.7, 22.6] },
+      { label: 'RoboCasa Jaco\nposition', values: [2.5, 22.5, 26.3] }] },
+    causal: { series: [
+        { name: 'Native', color: C.none }, { name: 'Action re-decode', color: 'var(--line)', stroke: C.none },
+        { name: 'Low-relevance corruption', color: 'var(--bg)', stroke: C.aware }, { name: 'Relevant corruption', color: C.aware },
+        { name: 'Same-phase context', color: 'var(--bg)', stroke: C.full }, { name: 'Wrong-phase context', color: C.full }],
+      unit: '%', ymax: 100, ticks: [0, 50, 100], groups: [
+      { label: 'LIBERO-90', values: [88.0, 88.0, 86.0, 82.3, 66.9, 46.2] },
+      { label: 'RoboCasa', values: [32.0, 32.0, 11.0, 3.0, 9.8, 13.1] }] },
+    // Retention curves are read off Fig. 6 of the paper (approximate, ±3 pp). Replace with exact values when exporting from the analysis.
+    retention: { phases: ['Approach', 'Grasp', 'Transport', 'Align', 'Release'], series: [
+      { name: 'Object boxes', color: C.none, values: [82, 60, 77, 42, 57], note: 'lower at alignment' },
+      { name: 'Gripper path', color: C.aware, values: [72, 87, 57, 95, 97], note: 'high at alignment and release' },
+      { name: 'Next motion', color: C.full, values: [57, 80, 83, 75, 40], note: 'highest in transport, lower at release' }] }
+  };
+
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, parent) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function fmt(v, unit) { return (unit === '%' ? v.toFixed(1) : v.toFixed(2)); }
+
+  function legend(container, series) {
+    var l = document.createElement('div'); l.className = 'legend';
+    series.forEach(function (s) {
+      var sp = document.createElement('span'); var i = document.createElement('i');
+      i.style.background = s.color; if (s.stroke) i.style.boxShadow = 'inset 0 0 0 2px ' + s.stroke;
+      sp.appendChild(i); sp.appendChild(document.createTextNode(s.name)); l.appendChild(sp);
+    });
+    container.appendChild(l);
+  }
+
+  function barChart(id, d) {
+    var box = document.getElementById(id); if (!box) return;
+    legend(box, d.series);
+    var W = 640, H = 300, mL = 44, mR = 12, mT = 16, mB = 48;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img' }, box);
+    var pw = W - mL - mR, ph = H - mT - mB;
+    var y = function (v) { return mT + ph - (v / d.ymax) * ph; };
+    d.ticks.forEach(function (t) {
+      el('line', { x1: mL, x2: W - mR, y1: y(t), y2: y(t), class: t === 0 ? 'axis' : 'grid-line' }, svg);
+      var tx = el('text', { x: mL - 8, y: y(t) + 4, 'text-anchor': 'end' }, svg);
+      tx.textContent = d.unit === '%' ? t : t.toFixed(1);
+    });
+    var ng = d.groups.length, gw = pw / ng, bw = Math.min(24, (gw * 0.7) / d.series.length), gap = 4;
+    var idx = 0;
+    d.groups.forEach(function (g, gi) {
+      var present = g.values.map(function (v, i) { return v == null ? null : i; }).filter(function (i) { return i !== null; });
+      var total = present.length * bw + (present.length - 1) * gap;
+      var x0 = mL + gi * gw + (gw - total) / 2;
+      present.forEach(function (si, k) {
+        var v = g.values[si], s = d.series[si], x = x0 + k * (bw + gap);
+        var r = el('rect', { x: x, y: y(v), width: bw, height: Math.max(0.5, y(0) - y(v)), rx: 3, class: 'bar', fill: s.color }, svg);
+        if (s.stroke) { r.setAttribute('stroke', s.stroke); r.setAttribute('stroke-width', 2); }
+        r.style.transitionDelay = (reduced ? 0 : idx * 60) + 'ms';
+        var tt = el('title', {}, r); tt.textContent = g.label.replace('\n', ' ') + ', ' + s.name + ': ' + fmt(v, d.unit) + (d.unit || '');
+        var lab = el('text', { x: x + bw / 2, y: y(v) - 5, 'text-anchor': 'middle', class: 'val' }, svg);
+        lab.textContent = fmt(v, d.unit); lab.style.transitionDelay = (reduced ? 0 : 500 + idx * 60) + 'ms';
+        idx++;
+      });
+      var lines = g.label.split('\n');
+      lines.forEach(function (ln, li) {
+        var t = el('text', { x: mL + gi * gw + gw / 2, y: y(0) + 16 + li * 14, 'text-anchor': 'middle', class: 'cat' + (ng > 3 ? ' small' : '') }, svg);
+        t.textContent = ln;
+      });
+    });
+  }
+
+  function lineMultiples(id, d) {
+    var box = document.getElementById(id); if (!box) return;
+    var wrap = document.createElement('div'); wrap.className = 'multi'; box.appendChild(wrap);
+    d.series.forEach(function (s, si) {
+      var cell = document.createElement('div');
+      var head = document.createElement('div'); head.className = 'legend'; head.style.cssText = 'justify-content:flex-start;flex-direction:column;align-items:flex-start;gap:0;min-height:48px';
+      head.innerHTML = '<span><i style="background:' + s.color + '"></i><b style="color:var(--fg);font-weight:600">' + s.name + '</b></span><span style="color:var(--faint);font-size:0.82rem">' + s.note + '</span>';
+      cell.appendChild(head);
+      var W = 320, H = 170, mL = 34, mR = 12, mT = 12, mB = 30;
+      var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img' }, cell);
+      var pw = W - mL - mR, ph = H - mT - mB;
+      var x = function (i) { return mL + (i / (d.phases.length - 1)) * pw; };
+      var y = function (v) { return mT + ph - (v / 100) * ph; };
+      [0, 50, 100].forEach(function (t) {
+        el('line', { x1: mL, x2: W - mR, y1: y(t), y2: y(t), class: t === 0 ? 'axis' : 'grid-line' }, svg);
+        var tx = el('text', { x: mL - 6, y: y(t) + 4, 'text-anchor': 'end' }, svg); tx.textContent = t;
+      });
+      d.phases.forEach(function (p, i) {
+        var t = el('text', { x: x(i), y: y(0) + 16, 'text-anchor': i === 0 ? 'start' : (i === d.phases.length - 1 ? 'end' : 'middle'), class: 'cat small' }, svg); t.textContent = p;
+      });
+      var pts = s.values.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
+      var path = el('polyline', { points: pts, class: 'line', stroke: s.color }, svg);
+      var len = 0; for (var i = 1; i < s.values.length; i++) { var dx = x(i) - x(i - 1), dy = y(s.values[i]) - y(s.values[i - 1]); len += Math.sqrt(dx * dx + dy * dy); }
+      path.setAttribute('stroke-dasharray', len); path.setAttribute('stroke-dashoffset', reduced ? 0 : len); path.dataset.len = len;
+      s.values.forEach(function (v, i) {
+        var c = el('circle', { cx: x(i), cy: y(v), r: 4.5, fill: s.color, stroke: 'var(--bg)', 'stroke-width': 2, class: 'dot' }, svg);
+        c.style.transitionDelay = (reduced ? 0 : 300 + i * 200) + 'ms';
+        var tt = el('title', {}, c); tt.textContent = s.name + ', ' + d.phases[i] + ': ' + v + '%';
+      });
+      wrap.appendChild(cell);
+    });
+  }
+
+  barChart('chart-real', DATA.real);
+  barChart('chart-indist', DATA.indist);
+  barChart('chart-shift', DATA.shift);
+  barChart('chart-causal', DATA.causal);
+  lineMultiples('chart-retention', DATA.retention);
+
+  // animate charts when scrolled into view
+  var charts = document.querySelectorAll('.chart');
+  if ('IntersectionObserver' in window && !reduced) {
+    var cio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in');
+        e.target.querySelectorAll('polyline.line').forEach(function (p) { p.setAttribute('stroke-dashoffset', 0); });
+        cio.unobserve(e.target);
+      });
+    }, { threshold: 0.35 });
+    charts.forEach(function (c) { cio.observe(c); });
+  } else {
+    charts.forEach(function (c) { c.classList.add('in'); c.querySelectorAll('polyline.line').forEach(function (p) { p.setAttribute('stroke-dashoffset', 0); }); });
+  }
+
+  // ---------- reasoning timelines under the robot clips ----------
+  var FIELDS = ['PLAN', 'SUBTASK REASONING', 'SUBTASK', 'MOVE REASONING', 'MOVE', 'GRIPPER POSITION', 'VISIBLE OBJECTS'];
+  var SHORT = ['PLAN', 'SUBTASK REASONING', 'SUBTASK', 'MOVE REASONING', 'MOVE', 'GRIPPER', 'OBJECTS'];
+  var TL = window.AWARE_TIMELINES || {};
+  var clips = [];
+  document.querySelectorAll('.clip[data-timeline]').forEach(function (fig) {
+    var tl = TL[fig.dataset.timeline]; if (!tl) return;
+    var video = fig.querySelector('video'), chips = fig.querySelector('.chips'), grid = fig.querySelector('.grid'), n = fig.querySelector('.who .n');
+    var chipEls = SHORT.map(function (s) { var c = document.createElement('span'); c.className = 'chip'; c.textContent = s; chips.appendChild(c); return c; });
+    var steps = tl.steps, cells = [];
+    grid.style.gridTemplateColumns = 'repeat(' + steps.length + ', 1fr)';
+    FIELDS.forEach(function (f, r) {
+      cells[r] = steps.map(function (s) { var c = document.createElement('div'); c.className = 'cell' + (s.on[f] ? ' on' : ''); c.title = f + ', query ' + (steps.indexOf(s) + 1) + (s.on[f] ? '' : ' (skipped)'); grid.appendChild(c); return c; });
+    });
+    var kept = 0, total = steps.length * FIELDS.length;
+    steps.forEach(function (s) { FIELDS.forEach(function (f) { if (s.on[f]) kept++; }); });
+    clips.push({ video: video, steps: steps, chipEls: chipEls, cells: cells, n: n, cur: -1 });
+  });
+  function tick() {
+    clips.forEach(function (c) {
+      var t = c.video.currentTime, i = -1;
+      for (var k = 0; k < c.steps.length; k++) { if (c.steps[k].t <= t) i = k; else break; }
+      if (i === c.cur) return;
+      if (c.cur >= 0) c.cells.forEach(function (row) { row[c.cur].classList.remove('now'); });
+      c.cur = i;
+      if (i < 0) { c.chipEls.forEach(function (e) { e.classList.remove('on'); }); c.n.textContent = ''; return; }
+      var s = c.steps[i];
+      FIELDS.forEach(function (f, k) { c.chipEls[k].classList.toggle('on', !!s.on[f]); });
+      c.cells.forEach(function (row) { row[i].classList.add('now'); });
+      c.n.textContent = 'query ' + (i + 1) + ' / ' + c.steps.length;
+    });
+    requestAnimationFrame(tick);
+  }
+  if (clips.length) requestAnimationFrame(tick);
+
+  // keep paired clips aligned: when both ended, restart both
+  document.querySelectorAll('[data-sync]').forEach(function (pair) {
+    var vids = Array.prototype.slice.call(pair.querySelectorAll('video'));
+    if (vids.length < 2) return;
+    vids.forEach(function (v) { v.loop = false; });
+    var ended = 0;
+    vids.forEach(function (v) {
+      v.addEventListener('ended', function () { ended += 1; if (ended >= vids.length) { ended = 0; vids.forEach(function (w) { w.currentTime = 0; w.play().catch(function () {}); }); } });
+    });
+  });
+
+  // play looping clips only while visible
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { var v = e.target; if (e.isIntersecting) v.play().catch(function () {}); else v.pause(); });
+    }, { rootMargin: '200px 0px' });
+    document.querySelectorAll('video[autoplay]').forEach(function (v) { io.observe(v); });
+  }
+
+  // nav highlight
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav li a'));
+  var sections = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  function onScroll() {
+    var yy = window.scrollY + 80, current = -1;
+    sections.forEach(function (s, i) { if (s && s.offsetTop <= yy) current = i; });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // copy bibtex
+  var btn = document.getElementById('copy-bib'), bib = document.getElementById('bib');
+  btn.addEventListener('click', function () {
+    function done() { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); }
+    function select() { var r = document.createRange(); r.selectNodeContents(bib); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(bib.textContent).then(done).catch(select); else select();
+  });
+})();
+</script>
+</body>
+</html>
