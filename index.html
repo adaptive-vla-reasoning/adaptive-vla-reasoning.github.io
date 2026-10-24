@@ -335,9 +335,6 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
           <div class="chips"></div>
         </figure>
       </div>
-      <div class="chart" id="chart-latency" style="margin-top:18px">
-        <div class="title">Normalized output decoding latency per policy query</div>
-      </div>
     </div>
     <div class="task">
       <h3>Put the brush on the blue towel</h3>
@@ -481,7 +478,6 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
       { name: 'Next motion', color: C.full, values: [57, 80, 83, 75, 40], note: 'highest in transport, lower at release' }] }
   };
 
-  var LAT = {"aware_tokens": [272, 273, 308, 273, 230, 238, 156, 287, 212, 244, 281, 220, 232, 140, 140, 236, 283, 264, 140, 139, 140, 266, 219, 218, 385, 94, 250, 347, 352, 333, 361, 350, 336, 246, 307, 291, 277, 248, 191, 256, 301, 291, 315, 292, 290, 286, 330, 140, 221, 232, 140, 155, 145, 140, 235, 236, 187, 231, 211, 152, 186, 204, 190, 212, 185, 259, 211, 201, 221, 161, 230, 221, 331, 180, 225, 185, 203, 259, 182]};
   var NS = 'http://www.w3.org/2000/svg';
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
@@ -570,47 +566,11 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
     });
   }
 
-  var latUpdate = {};
-  function latencyChart(id) {
-    var box = document.getElementById(id); if (!box) return;
-    var FULL_TOK = 281, FULL_MS = 1343.5;   // Full Reasoning mean output tokens and output decoding latency on WidowX (Table II)
-    var vals = LAT.aware_tokens.map(function (t) { return 100 * t / FULL_TOK; });
-    legend(box, [{ name: 'Full Reasoning (mean, 281 output tokens)', color: 'transparent', stroke: C.full }, { name: 'AWARE, this rollout', color: C.aware }]);
-    var W = 900, H = 220, mL = 48, mR = 12, mT = 10, mB = 34;
-    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img' }, box);
-    var pw = W - mL - mR, ph = H - mT - mB;
-    var n = vals.length, ymax = 150;
-    var x = function (i) { return mL + (i / (n - 1)) * pw; };
-    var y = function (v) { return mT + ph - (Math.min(v, ymax) / ymax) * ph; };
-    [0, 50, 100, 150].forEach(function (t) {
-      if (t !== 100) el('line', { x1: mL, x2: W - mR, y1: y(t), y2: y(t), class: t === 0 ? 'axis' : 'grid-line' }, svg);
-      var tx = el('text', { x: mL - 8, y: y(t) + 4, 'text-anchor': 'end' }, svg); tx.textContent = t + '%';
-    });
-    el('line', { x1: mL, x2: W - mR, y1: y(100), y2: y(100), stroke: C.full, 'stroke-width': 2, 'stroke-dasharray': '6 5' }, svg);
-    for (var q = 0; q < n; q += 10) {
-      var t = el('text', { x: x(q), y: y(0) + 16, 'text-anchor': 'middle', class: 'cat small' }, svg); t.textContent = q + 1;
-    }
-    var xl = el('text', { x: mL + pw / 2, y: H - 2, 'text-anchor': 'middle', class: 'cat small' }, svg); xl.textContent = 'policy query';
-    var path = el('polyline', { points: '', class: 'line', stroke: C.aware, style: 'transition:none' }, svg);
-    var dot = el('circle', { r: 5, fill: C.aware, stroke: 'var(--bg)', 'stroke-width': 2, style: 'opacity:0' }, svg);
-    var lab = el('text', { x: 0, y: 0, 'text-anchor': 'start', style: 'opacity:0;font-weight:600', fill: C.aware }, svg);
-    latUpdate.eggplant_aware = function (i) {
-      if (i < 0) { path.setAttribute('points', ''); dot.style.opacity = 0; lab.style.opacity = 0; return; }
-      var pts = []; for (var q = 0; q <= i && q < n; q++) pts.push(x(q) + ',' + y(vals[q]));
-      path.setAttribute('points', pts.join(' '));
-      var j = Math.min(i, n - 1);
-      dot.setAttribute('cx', x(j)); dot.setAttribute('cy', y(vals[j])); dot.style.opacity = 1;
-      lab.setAttribute('x', Math.max(mL + 55, Math.min(W - mR - 55, x(j)))); lab.setAttribute('text-anchor', 'middle'); lab.setAttribute('y', Math.max(mT + 10, y(vals[j]) - 13));
-      lab.textContent = Math.round(vals[j]) + '% (' + LAT.aware_tokens[j] + ' tokens)'; lab.style.opacity = 1;
-    };
-  }
-
   barChart('chart-real', DATA.real);
   barChart('chart-indist', DATA.indist);
   barChart('chart-shift', DATA.shift);
   barChart('chart-causal', DATA.causal);
   lineMultiples('chart-retention', DATA.retention);
-  latencyChart('chart-latency');
 
   // animate charts when scrolled into view
   var charts = document.querySelectorAll('.chart');
@@ -646,7 +606,6 @@ footer .flogos img { height: 20px; width: auto; opacity: 0.75; }
       for (var k = 0; k < c.steps.length; k++) { if (c.steps[k].t <= t) i = k; else break; }
       if (i === c.cur) return;
       c.cur = i;
-      if (latUpdate[c.name]) latUpdate[c.name](i);
       if (i < 0) { c.chipEls.forEach(function (e) { e.classList.remove('on'); }); c.n.textContent = ''; return; }
       var s = c.steps[i];
       FIELDS.forEach(function (f, k) { c.chipEls[k].classList.toggle('on', !!s.on[f]); });
